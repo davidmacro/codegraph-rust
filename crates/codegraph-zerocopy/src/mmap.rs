@@ -4,7 +4,9 @@
 //! data access without copying.
 
 use crate::{ZeroCopyError, ZeroCopyResult};
-use memmap2::{Advice, Mmap, MmapMut, MmapOptions};
+#[cfg(unix)]
+use memmap2::Advice;
+use memmap2::{Mmap, MmapMut, MmapOptions};
 use parking_lot::{RwLock, RwLockReadGuard, RwLockWriteGuard};
 use rkyv::api::high::HighValidator;
 use rkyv::{access, access_unchecked, Archive};
@@ -89,7 +91,9 @@ impl MmapReader {
         Ok(&self.mmap[start..start + len])
     }
 
-    /// Advise the kernel about memory access patterns
+    /// Advise the kernel about memory access patterns (unix only;
+    /// memmap2's advise APIs are gated to cfg(unix)).
+    #[cfg(unix)]
     pub fn advise(&self, advice: Advice) -> ZeroCopyResult<()> {
         self.mmap.advise(advice)?;
         Ok(())
@@ -194,7 +198,9 @@ impl MmapWriter {
         Ok(())
     }
 
-    /// Advise the kernel about memory access patterns
+    /// Advise the kernel about memory access patterns (unix only;
+    /// memmap2's advise APIs are gated to cfg(unix)).
+    #[cfg(unix)]
     pub fn advise(&self, advice: Advice) -> ZeroCopyResult<()> {
         self.mmap.advise(advice)?;
         Ok(())
