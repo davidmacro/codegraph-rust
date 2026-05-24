@@ -36,7 +36,6 @@ clap = { workspace = true }
 colored = { workspace = true }
 indicatif = { workspace = true }
 once_cell = { workspace = true }
-tikv-jemallocator = { workspace = true }
 hashbrown = { workspace = true }
 rustc-hash = { workspace = true }
 sha2 = { workspace = true }
@@ -58,8 +57,14 @@ libc = "0.2"
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.61", features = [
     "Win32_Foundation",
-    "Win32_System_Memory"
+    "Win32_System_Memory",
+    "Win32_System_Threading"
 ] }
+
+# jemalloc only builds on non-MSVC targets (tikv-jemalloc-sys cannot
+# build with the MSVC toolchain on Windows).
+[target.'cfg(not(target_env = "msvc"))'.dependencies]
+tikv-jemallocator = { workspace = true }
 
 [dev-dependencies]
 tokio-test = { workspace = true }

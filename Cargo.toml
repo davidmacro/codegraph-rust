@@ -172,9 +172,12 @@ generic-array = "0.14.9"
 matchit = "0.8.6"
 pdqselect = "0.1.1"
 
-# AutoAgents
-autoagents = "*"
-autoagents-derive = "*"
+# AutoAgents. Pinned to a specific git rev — earlier revs in the repo contain a
+# file whose name is invalid on NTFS (`docs/theme/catppuccin-admonish.css .`)
+# which breaks `cargo install` on Windows; the registry tarballs are also
+# incomplete. The local ChatProvider adapter is written against the v0.3.7 API.
+autoagents = { git = "https://github.com/liquidos-ai/AutoAgents", rev = "57ebeaa4" }
+autoagents-derive = { git = "https://github.com/liquidos-ai/AutoAgents", rev = "57ebeaa4" }
 
 # Moved MCP crate dependencies
 nix = { version = "0.30.1", features = ["process", "signal"] }

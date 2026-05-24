@@ -31,10 +31,9 @@ futures = { workspace = true }
 num_cpus = { workspace = true }
 unicode-normalization = "0.1"
 
-# Local embeddings (Candle) - optional via feature
-candle-core = { version = "0.9.1", optional = true, default-features = false, features = ["metal"] }
-candle-nn = { version = "0.9.1", optional = true, default-features = false }
-candle-transformers = { version = "0.9.1", optional = true, default-features = false }
+# Local embeddings (Candle) - optional via feature.
+# Per-target split: enable the metal backend on macOS; everywhere else build CPU-only
+# (the objc2 backend used by `metal` is Apple-only). See the target tables below.
 tokenizers = { workspace = true }  # Always available for token counting in Jina provider
 hf-hub = { version = "0.4", optional = true, default-features = true, features = ["tokio"] }
 lru = { workspace = true }
@@ -47,7 +46,17 @@ ort = { version = "2.0.0-rc.10", optional = true, default-features = false, feat
 semchunk-rs = { workspace = true }
 fxhash = "0.2.1"
 
+# Apple-only: enable candle's metal backend on macOS.
+[target.'cfg(target_os = "macos")'.dependencies]
+candle-core = { version = "0.9.1", optional = true, default-features = false, features = ["metal"] }
+candle-nn = { version = "0.9.1", optional = true, default-features = false }
+candle-transformers = { version = "0.9.1", optional = true, default-features = false }
 
+# Non-Apple: CPU-only candle so local-embeddings still builds on Windows/Linux.
+[target.'cfg(not(target_os = "macos"))'.dependencies]
+candle-core = { version = "0.9.1", optional = true, default-features = false }
+candle-nn = { version = "0.9.1", optional = true, default-features = false }
+candle-transformers = { version = "0.9.1", optional = true, default-features = false }
 
 [dev-dependencies]
 tokio-test = { workspace = true }

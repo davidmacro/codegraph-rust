@@ -1,7 +1,9 @@
 use crate::error::Result;
 use anyhow::Context;
 use dashmap::DashMap;
+#[cfg(unix)]
 use nix::sys::signal::{self, Signal};
+#[cfg(unix)]
 use nix::unistd::Pid;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -287,6 +289,7 @@ impl ProcessManager {
         Err(anyhow::anyhow!("No running server found").into())
     }
 
+    #[cfg(unix)]
     fn is_process_running(&self, pid: u32) -> Result<bool> {
         match signal::kill(Pid::from_raw(pid as i32), None) {
             Ok(_) => Ok(true),
@@ -295,6 +298,31 @@ impl ProcessManager {
         }
     }
 
+    #[cfg(windows)]
+    fn is_process_running(&self, pid: u32) -> Result<bool> {
+        use windows_sys::Win32::Foundation::{CloseHandle, STILL_ACTIVE};
+        use windows_sys::Win32::System::Threading::{
+            GetExitCodeProcess, OpenProcess, PROCESS_QUERY_LIMITED_INFORMATION,
+        };
+
+        unsafe {
+            let handle = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, 0, pid);
+            if handle.is_null() {
+                // OpenProcess fails if the process does not exist (or we lack rights).
+                // Treat as "not running" — the caller uses this to clean up stale PID files.
+                return Ok(false);
+            }
+            let mut exit_code: u32 = 0;
+            let ok = GetExitCodeProcess(handle, &mut exit_code as *mut u32);
+            CloseHandle(handle);
+            if ok == 0 {
+                return Err(anyhow::anyhow!("GetExitCodeProcess failed for pid {}", pid).into());
+            }
+            Ok(exit_code == STILL_ACTIVE as u32)
+        }
+    }
+
+    #[cfg(unix)]
     fn graceful_shutdown(&self, pid: u32) -> Result<()> {
         info!("Sending SIGTERM to process {}", pid);
         signal::kill(Pid::from_raw(pid as i32), Signal::SIGTERM)
@@ -314,10 +342,41 @@ impl ProcessManager {
         Ok(())
     }
 
+    #[cfg(windows)]
+    fn graceful_shutdown(&self, pid: u32) -> Result<()> {
+        // Windows has no portable SIGTERM equivalent for non-console processes;
+        // fall back to TerminateProcess.
+        info!("Terminating process {} (Windows has no graceful signal)", pid);
+        self.force_kill(pid)
+    }
+
+    #[cfg(unix)]
     fn force_kill(&self, pid: u32) -> Result<()> {
         info!("Sending SIGKILL to process {}", pid);
         signal::kill(Pid::from_raw(pid as i32), Signal::SIGKILL)
             .context("Failed to send SIGKILL")?;
+        Ok(())
+    }
+
+    #[cfg(windows)]
+    fn force_kill(&self, pid: u32) -> Result<()> {
+        use windows_sys::Win32::Foundation::CloseHandle;
+        use windows_sys::Win32::System::Threading::{
+            OpenProcess, TerminateProcess, PROCESS_TERMINATE,
+        };
+
+        info!("TerminateProcess for pid {}", pid);
+        unsafe {
+            let handle = OpenProcess(PROCESS_TERMINATE, 0, pid);
+            if handle.is_null() {
+                return Err(anyhow::anyhow!("OpenProcess({}) failed", pid).into());
+            }
+            let ok = TerminateProcess(handle, 1);
+            CloseHandle(handle);
+            if ok == 0 {
+                return Err(anyhow::anyhow!("TerminateProcess({}) failed", pid).into());
+            }
+        }
         Ok(())
     }
 

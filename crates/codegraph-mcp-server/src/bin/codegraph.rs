@@ -2334,9 +2334,6 @@ mod cli_command_tests {
 
 #[cfg(feature = "daemon")]
 async fn handle_daemon_stop(path: PathBuf) -> Result<()> {
-    use nix::sys::signal::{kill, Signal};
-    use nix::unistd::Pid;
-
     let project_root = std::fs::canonicalize(&path)
         .with_context(|| format!("Invalid project path: {:?}", path))?;
 
@@ -2350,9 +2347,7 @@ async fn handle_daemon_stop(path: PathBuf) -> Result<()> {
                 format!("🛑 Stopping daemon (PID: {})...", pid).yellow()
             );
 
-            // Send SIGTERM
-            let pid = Pid::from_raw(pid as i32);
-            match kill(pid, Signal::SIGTERM) {
+            match send_stop_signal(pid) {
                 Ok(_) => {
                     println!("{}", "✅ Stop signal sent successfully".green());
 
@@ -2381,6 +2376,36 @@ async fn handle_daemon_stop(path: PathBuf) -> Result<()> {
         }
     }
 
+    Ok(())
+}
+
+#[cfg(all(feature = "daemon", unix))]
+fn send_stop_signal(pid: u32) -> anyhow::Result<()> {
+    use nix::sys::signal::{kill, Signal};
+    use nix::unistd::Pid;
+    kill(Pid::from_raw(pid as i32), Signal::SIGTERM)
+        .map_err(|e| anyhow::anyhow!("kill(SIGTERM) failed: {e}"))
+}
+
+#[cfg(all(feature = "daemon", windows))]
+fn send_stop_signal(pid: u32) -> anyhow::Result<()> {
+    // Windows has no SIGTERM for non-console processes; TerminateProcess is the
+    // closest equivalent. The daemon does not get to run shutdown handlers.
+    use windows_sys::Win32::Foundation::CloseHandle;
+    use windows_sys::Win32::System::Threading::{
+        OpenProcess, TerminateProcess, PROCESS_TERMINATE,
+    };
+    unsafe {
+        let handle = OpenProcess(PROCESS_TERMINATE, 0, pid);
+        if handle.is_null() {
+            anyhow::bail!("OpenProcess({pid}) failed");
+        }
+        let ok = TerminateProcess(handle, 1);
+        CloseHandle(handle);
+        if ok == 0 {
+            anyhow::bail!("TerminateProcess({pid}) failed");
+        }
+    }
     Ok(())
 }
 

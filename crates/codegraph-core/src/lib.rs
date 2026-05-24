@@ -51,7 +51,9 @@ pub use types::*;
 pub use versioning::*;
 pub use watch::*;
 
-// Use jemalloc as the global allocator when the feature is enabled
-#[cfg(feature = "jemalloc")]
+// Use jemalloc as the global allocator when the feature is enabled.
+// jemalloc-sys cannot build on Windows MSVC, so skip it there even if the
+// feature is on — falls back to the system allocator.
+#[cfg(all(feature = "jemalloc", not(target_env = "msvc")))]
 #[global_allocator]
 static GLOBAL: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;

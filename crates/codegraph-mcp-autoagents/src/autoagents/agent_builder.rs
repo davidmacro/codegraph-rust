@@ -160,7 +160,10 @@ impl CodeGraphChatAdapter {
 
 #[async_trait]
 impl ChatProvider for CodeGraphChatAdapter {
-    async fn chat(
+    // In autoagents 0.3.7 the trait split: `chat` (no tools) has a default impl
+    // that delegates to `chat_with_tools`, and `chat_with_tools` is the required
+    // method. So we implement `chat_with_tools` directly here.
+    async fn chat_with_tools(
         &self,
         messages: &[ChatMessage],
         tools: Option<&[Tool]>,
@@ -348,10 +351,12 @@ impl ChatProvider for CodeGraphChatAdapter {
         }))
     }
 
+    // 0.3.7 trait: `chat_stream(messages, json_schema)` — no `tools` here. The
+    // `_with_tools` variant returns a different stream type (StreamChunk); we
+    // don't support streaming at all, so override the non-tools variant.
     async fn chat_stream(
         &self,
         _messages: &[ChatMessage],
-        _tools: Option<&[Tool]>,
         _json_schema: Option<autoagents::llm::chat::StructuredOutputFormat>,
     ) -> Result<
         std::pin::Pin<Box<dyn futures::Stream<Item = Result<String, LLMError>> + Send>>,
@@ -649,11 +654,11 @@ impl<T: AgentDeriveT + AgentHooks + Clone> TierAwareReActAgent<T> {
 impl<T: AgentDeriveT + AgentHooks + Clone> AgentDeriveT for TierAwareReActAgent<T> {
     type Output = T::Output;
 
-    fn description(&self) -> &'static str {
+    fn description(&self) -> &str {
         self.inner_derive.description()
     }
 
-    fn name(&self) -> &'static str {
+    fn name(&self) -> &str {
         self.inner_derive.name()
     }
 

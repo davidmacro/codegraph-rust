@@ -64,9 +64,10 @@ tokenizers = { workspace = true }  # Qwen2.5-Coder tokenizer for accurate token 
 # codegraph-api not used directly here; avoid pulling heavy deps
 ## core-rag-mcp-server intentionally not linked to keep binary lean
 
-# AutoAgents framework for agentic workflows
-autoagents = { git = "https://github.com/liquidos-ai/AutoAgents", optional = true }
-autoagents-derive = { git = "https://github.com/liquidos-ai/AutoAgents", optional = true }
+# AutoAgents framework for agentic workflows. See workspace Cargo.toml for the
+# rev pin (a post-fix rev that no longer contains the NTFS-invalid path).
+autoagents = { workspace = true, optional = true }
+autoagents-derive = { workspace = true, optional = true }
 codegraph-mcp-core = { path = "../codegraph-mcp-core" }
 codegraph-mcp-tools = { path = "../codegraph-mcp-tools", optional = true }
 unicode-bom = "2.0.3"
