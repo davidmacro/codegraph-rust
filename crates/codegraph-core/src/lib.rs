@@ -25,6 +25,7 @@ pub mod watch;
 
 pub use advanced_config::*;
 pub use buffer_pool::*;
+pub use compression::*;
 pub use config::ConfigManager as ServerConfigManager;
 pub use config::LoggingConfig as ServerLoggingConfig;
 pub use config::{
@@ -32,7 +33,6 @@ pub use config::{
     SurrealDbConfig, VectorConfig,
 };
 pub use config_manager::*;
-pub use compression::*;
 pub use embedding_config::*;
 pub use error::*;
 pub use incremental::*;

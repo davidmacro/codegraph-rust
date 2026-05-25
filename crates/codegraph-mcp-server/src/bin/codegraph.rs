@@ -2392,9 +2392,7 @@ fn send_stop_signal(pid: u32) -> anyhow::Result<()> {
     // Windows has no SIGTERM for non-console processes; TerminateProcess is the
     // closest equivalent. The daemon does not get to run shutdown handlers.
     use windows_sys::Win32::Foundation::CloseHandle;
-    use windows_sys::Win32::System::Threading::{
-        OpenProcess, TerminateProcess, PROCESS_TERMINATE,
-    };
+    use windows_sys::Win32::System::Threading::{OpenProcess, TerminateProcess, PROCESS_TERMINATE};
     unsafe {
         let handle = OpenProcess(PROCESS_TERMINATE, 0, pid);
         if handle.is_null() {

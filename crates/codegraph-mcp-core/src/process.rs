@@ -346,7 +346,10 @@ impl ProcessManager {
     fn graceful_shutdown(&self, pid: u32) -> Result<()> {
         // Windows has no portable SIGTERM equivalent for non-console processes;
         // fall back to TerminateProcess.
-        info!("Terminating process {} (Windows has no graceful signal)", pid);
+        info!(
+            "Terminating process {} (Windows has no graceful signal)",
+            pid
+        );
         self.force_kill(pid)
     }
 
